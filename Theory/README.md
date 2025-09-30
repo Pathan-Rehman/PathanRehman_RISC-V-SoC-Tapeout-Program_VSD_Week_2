@@ -4,9 +4,13 @@
 
 ## What is a System-on-Chip (SoC)?
 
+<img width="598" height="456" alt="image" src="https://github.com/user-attachments/assets/cfff10e6-2b70-4c67-99c5-4c5459fe9997" />
+
 A System-on-Chip (SoC) is an integrated circuit that consolidates all major components of a computer or electronic system onto a single chip. Instead of discrete components soldered onto a PCB, an SoC brings together processing, memory, connectivity, and specialized hardware to deliver high functionality in compact form. SoCs are pervasive in modern electronics, enabling devices like smartphones, wearables, and embedded systems to deliver high performance, low power consumption, and efficiency.
 
 ## Components of a Typical SoC
+
+<img width="1085" height="566" alt="image" src="https://github.com/user-attachments/assets/a31257ec-7db6-40ea-a9b4-625f115f6e95" />
 
 A classic SoC design comprises the following essential building blocks:
 
@@ -17,6 +21,9 @@ A classic SoC design comprises the following essential building blocks:
 
 ## Why BabySoC is a Simplified Model for Learning SoC Concepts
 
+<img width="1248" height="698" alt="image" src="https://github.com/user-attachments/assets/b43a16bd-9157-49bc-b846-011fb4aaa9be" />
+
+
 BabySoC is designed as an educational microcosm of commercial SoC architectures. It simplifies the real-world complexity by:
 
 - Providing minimal but representative CPU, memory, peripheral, and interconnect elements.
@@ -24,6 +31,8 @@ BabySoC is designed as an educational microcosm of commercial SoC architectures.
 - Facilitating hands-on experience and experimentation in SoC structure, behavior, and integration, making it accessible for learning foundational principles before tackling industry-scale systems.
 
 ## The Role of Functional Modelling Before RTL and Physical Design
+
+<img width="1024" height="561" alt="image" src="https://github.com/user-attachments/assets/d4d3b5c0-7932-4542-bcad-3b585e1dacf0" />
 
 Functional modelling serves as the blueprint for the SoC, capturing high-level behavior and inter-module communication before any low-level detail is committed:
 
