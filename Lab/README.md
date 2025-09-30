@@ -194,7 +194,7 @@ cd output/pre_synth_sim
 
 ### Simulation Log
 
-
+[Read Here](https://github.com/Pathan-Rehman/PathanRehman_RISC-V-SoC-Tapeout-Program_VSD_Week_2/blob/main/Lab/SimulationLog.md)
 
 ### Waveform Viewing
 ```bash
