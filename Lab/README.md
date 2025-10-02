@@ -1,22 +1,4 @@
 # VSDBabySoC Design and Verification Guide
-
-## Table of Contents
-
-- Introduction: VSDBabySoC Overview  
-- System Details and Components  
-- Problem Statement  
-- Essential Concepts: SoC, RVMYTH, PLL, DAC  
-- Directory and Project Structure  
-- Environment Setup and Repository Cloning  
-- TLV-to-Verilog Conversion for RVMYTH  
-- Simulation Workflow  
-    - Pre-Synthesis Simulation Steps  
-    - Simulation Log Example  
-    - Waveform Analysis in GTKWave  
-    - DAC Analog Output Verification  
-- Troubleshooting  
-- Rationale for Verification Phases  
-
 ***
 
 ## Introduction: VSDBabySoC Overview
@@ -237,6 +219,162 @@ This screenshot further illustrates sustained analog output transitions, showing
 - **Path Resolution Failures**: Double-check -I flags and explicit paths.
 
 ***
+
+# Yosys Synthesis Tutorial for BabySoC
+
+## Overview
+
+This guide demonstrates the synthesis process of the BabySoC project using the Yosys Open SYnthesis Suite. It covers command usage, the correct handling of file paths, and provides solutions for common synthesis errors.
+
+***
+
+## Directory Structure
+
+Make sure the following project structure is set up:
+
+```
+~/Desktop/labs/Week2/VLSI/VSDBabySoC/
+├── src/
+│   ├── include/           # Verilog include files
+│   ├── module/            # Verilog modules (vsdbabysoc.v, clkgate.v, rvmyth.v, etc)
+│   └── lib/               # Liberty files (sky130fdschdtt025C1v80.lib, avsddac.lib, avsdpll.lib)
+```
+All paths provided in commands below match those seen in actual flows.
+
+***
+
+## Step-by-Step Synthesis Flow
+
+### 1. Launch Yosys
+
+Start Yosys from your working directory:
+
+```sh
+cd ~/Desktop/labs/Week2/VLSI/VSDBabySoC/src
+yosys
+```
+
+***
+
+### 2. Load Liberty Cell Libraries
+
+Load the technology cell library (example for Sky130):
+
+```yosys
+read_liberty -lib /home/vsdtapeout/Desktop/labs/Week_1/Day_1/VLSI/sky130RTLDesignAndSynthesisWorkshop/lib/sky130_fd_sc_hd__tt_025C_1v80.lib
+read_liberty -lib /home/vsdtapeout/Desktop/labs/Week_2/VLSI/VSDBabySoC/src/lib/avsddac.lib /home/vsdtapeout/Desktop/labs/Week_2/VLSI/VSDBabySoC/src/lib/avsdpll.lib
+```
+<img width="822" height="610" alt="image" src="https://github.com/user-attachments/assets/09e61736-eae1-402f-879f-b65297e6f0e1" />
+
+If the library contains definitions, you should see "Imported XXX cell types from liberty file".
+
+***
+
+### 3. Read Verilog Source Files
+
+Indicate SV (SystemVerilog) support and all include/module paths. Avoid typographical errors in commands or filenames:
+
+```yosys
+read_verilog -sv -I /home/vsdtapeout/Desktop/labs/Week_2/VLSI/VSDBabySoC/src/include/ -I /home/vsdtapeout/Desktop/labs/Week_2/VLSI/VSDBabySoc/src/module/ /home/vsdtapeout/Desktop/labs/Week_2/VLSI/VSDBabySoC/src/module/vsdbabysoc.v /home/vsdtapeout/Desktop/labs/Week_2/VLSI/VSDBabySoC/src/module/clk_gate.v /home/vsdtapeout/Desktop/labs/Week_2/VLSI/VSDBabySoC/src/module/rvmyth.v
+```
+<img width="823" height="609" alt="image" src="https://github.com/user-attachments/assets/22ea9913-9278-4f4b-893d-068893e53331" />
+
+The above paths must exist; adjust them as per your actual directory. If successful, you'll see "Successfully finished Verilog frontend".
+
+***
+
+### 4. Specify the Top Module
+
+Set the top-level module for synthesis (usually `vsdbabysoc`):
+
+```yosys
+synth -top vsdbabysoc
+```
+<img width="827" height="789" alt="image" src="https://github.com/user-attachments/assets/ac6fbf92-d994-4b22-b39b-270372b875fa" />
+
+This will trigger module hierarchy and process netlist conversion with messages such as "Analyzing design hierarchy... Top module Used module..." and "Creating decoders for process...".
+
+***
+
+### 5. Technology Mapping
+
+Map RTL to gates using ABC and techmap:
+
+```yosys
+# Automatic, as part of 'synth'
+```
+Expect log reports with extracted gate counts and optimized modules (e.g., "Extracted 4089 gates and 5280 wires to a netlist network with 1188 inputs and 216 outputs").
+
+***
+
+### 6. Run Design Checks
+
+```yosys
+check
+```
+<img width="603" height="212" alt="image" src="https://github.com/user-attachments/assets/4a70ce88-d118-40e6-a099-60826a35abfb" />
+
+This checks for obvious structural problems in your synthesized design.
+
+***
+
+### 7. Write the Synthesized Netlist
+
+Export your final synthesized Verilog netlist:
+
+```yosys
+write_verilog vsdbabysoc_synth_net.v
+abc -liberty /home/vsdtapeout/Desktop/labs/Week_2/VLSI/VSDBabySoC/src/lib/sky130_fd_sc_hd__tt_025C_1v80.lib 
+
+```
+Netlist files are typically written in the working directory.
+
+***
+
+### 8. Visualize the Synthesized Design
+
+For visual inspection, use:
+
+```yosys
+show vsdbabysoc
+```
+<img width="1050" height="310" alt="image" src="https://github.com/user-attachments/assets/d6b5d48d-8936-47f4-8fd6-ebf0c63b0881" />
+If multiple modules are present, specify only one module due to Graphviz format limitations ("ERROR: For formats different than 'ps' or 'dot' only one module must be selected"). By default, results are stored in `/home/vsdtapeout/.yosys_show.dot`.
+
+***
+
+## Common Errors & Solutions
+
+| Error Message | Cause | Solution |
+|---------------|-------|----------|
+| `ERROR Missing function on output GCLK of cell ...` | Liberty file lacks function definition for some output | Fix .lib file or use correct version |
+| `ERROR syntax error, unexpected TOKID ...` | File is not valid Verilog/SystemVerilog | Check syntax using a simulator (Icarus Verilog recommended) |
+| `ERROR Cant open input file ... for reading No such file or directory` | File path typo, or file missing | Double-check directory and filenames |
+| `ERROR Re-definition of module ...` | Module loaded twice | Ensure each file is loaded only once |
+| `ERROR Cant open include file ...` | Include file missing or path wrong | Verify/include directory and file names |
+| `ERROR Command syntax error No filename given.` | Syntax error in Yosys command | Follow documented syntax, use help |
+| `WARNING: Font family 'Times-Roman' is not available, using 'Ubuntu Sans 11'` | Graphviz font not installed | Usually not fatal, just an info message |
+
+***
+
+## Tips for Successful Synthesis
+
+- Validate Verilog modules in a simulator before Yosys synthesis to catch subtle syntax issues (Yosys parser is not very descriptive for errors).
+- Always use absolute paths for scripts to avoid directory confusion.
+- Organize modules, includes, and libraries separately for clarity.
+- Read the log output for warnings about memory/register transformations or dead code removal.
+- Use `check` for sanity of final netlist before downstream tools.
+
+***
+
+## References
+
+- Yosys official documentation
+- Synth logs and flow output
+
+***
+
+This tutorial should allow any user with access to the files and requisite Yosys/ABC/Graphviz dependencies to fully synthesize, check, and troubleshoot the BabySoC design with real module and cell library paths.
 
 ## Rationale for Verification Phases
 
