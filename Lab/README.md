@@ -367,16 +367,175 @@ If multiple modules are present, specify only one module due to Graphviz format 
 
 ***
 
-## References
-
-- Yosys official documentation
-- Synth logs and flow output
+# Post-Synthesis of VSDBabySoC
 
 ***
 
-This tutorial should allow any user with access to the files and requisite Yosys/ABC/Graphviz dependencies to fully synthesize, check, and troubleshoot the BabySoC design with real module and cell library paths.
+## 1. Launch Yosys
 
-## Rationale for Verification Phases
+```bash
+yosys
+```
 
-- **Pre-Synthesis Simulation**: Validates RTL logic functionality in a zero-delay environment; helpful for initial debugging and cleaning up code errors.
-- **Post-Synthesis Simulation (GLS)**: Simulates synthesized gate-level netlist for accurate timing validation and checks for dynamic mismatches or unintended hardware artifacts.
+Start the Yosys synthesis tool. This opens the Yosys interactive shell where you can enter synthesis commands.
+
+<img width="814" height="605" alt="image" src="https://github.com/user-attachments/assets/fd430366-995c-463a-a9fe-f9f8cb1ea421" />
+
+***
+
+## 2. Read the Main Verilog Module
+
+```bash
+read_verilog /home/vsdtapeout/Desktop/labs/Week_2/VLSI/VSDBabySoC/src/module/vsdbabysoc.v
+```
+
+This command loads the main Verilog source file of your design into Yosys. It parses the RTL code and converts it into Yosys's internal representation.
+
+<img width="822" height="237" alt="image" src="https://github.com/user-attachments/assets/5e82492f-1a75-41d7-838a-afda9357fe8a" />
+
+***
+
+## 3. Read Additional Verilog Modules with Include Paths
+
+```bash
+read_verilog -I /home/vsdtapeout/Desktop/labs/Week_2/VLSI/VSDBabySoC/src/include/ /home/vsdtapeout/Desktop/labs/Week_2/VLSI/VSDBabySoC/src/module/rvmyth.v
+
+read_verilog -I /home/vsdtapeout/Desktop/labs/Week_2/VLSI/VSDBabySoC/src/include/ /home/vsdtapeout/Desktop/labs/Week_2/VLSI/VSDBabySoC/src/module/clk_gate.v
+```
+
+These commands load additional Verilog modules required by your design. The `-I` option specifies the directory for included files (like headers or macros). This ensures all dependencies are resolved.
+
+<img width="820" height="615" alt="image" src="https://github.com/user-attachments/assets/9292c8a5-3f46-4a7a-9c36-08f2fe40d4b4" />
+
+
+***
+
+## 4. Load Liberty Cell Libraries
+
+```bash
+read_liberty -lib /home/vsdtapeout/Desktop/labs/Week_2/VLSI/VSDBabySoC/src/lib/avsdpll.lib /home/vsdtapeout/Desktop/labs/Week_2/VLSI/VSDBabySoC/src/lib/avsddac.lib /home/vsdtapeout/Desktop/labs/Week_2/VLSI/VSDBabySoC/src/lib/sky130_fd_sc_hd__tt_025C_1v80.lib
+```
+
+This command loads the standard cell libraries in Liberty format. These libraries contain timing, power, and area information for the cells used in synthesis and technology mapping.
+
+<img width="818" height="613" alt="image" src="https://github.com/user-attachments/assets/0813d972-0245-4872-a203-04fae198b871" />
+
+***
+
+## 5. Synthesize the Design with Top Module
+
+```bash
+synth -top vsdbabysoc
+```
+
+This runs the generic synthesis process on the design, targeting the specified top module `vsdbabysoc`. It performs RTL elaboration, optimization, and prepares the design for mapping to standard cells.
+
+<img width="817" height="616" alt="image" src="https://github.com/user-attachments/assets/8403593b-d50a-4c5f-b4d9-010010020fa6" />
+
+***
+
+## 6. Map Flip-Flops to Standard Cells
+
+```bash
+dfflibmap -liberty /home/vsdtapeout/Desktop/labs/Week_2/VLSI/VSDBabySoC/src/lib/sky130_fd_sc_hd__tt_025C_1v80.lib
+```
+
+This step maps all flip-flops in the design to the flip-flop cells defined in the Liberty library. It ensures the flip-flops are technology-specific and compatible with the target process.
+
+<img width="815" height="612" alt="image" src="https://github.com/user-attachments/assets/c960d730-95f5-4a1b-822f-c9841b9d9a94" />
+
+***
+
+## 7. Technology Mapping and Optimization with ABC
+
+```bash
+abc -liberty /home/vsdtapeout/Desktop/labs/Week_2/VLSI/VSDBabySoC/src/lib/sky130_fd_sc_hd__tt_025C_1v80.lib -script +strash;scorr;ifraig;retime{D};strash;dch,-f;map,-M,1{D}
+```
+
+This command invokes the ABC tool integrated in Yosys for advanced logic optimization and technology mapping. The script applies a sequence of transformations:
+
+- `+strash`: Structural hashing to reduce logic.
+- `scorr`: Structural correlation.
+- `ifraig`: Iterative functional reduction.
+- `retime{D}`: Retiming to optimize registers.
+- `dch,-f`: Don't care optimization.
+- `map,-M,1{D}`: Map logic to standard cells with specific constraints.
+
+This step improves area, timing, and power characteristics.
+
+<img width="820" height="615" alt="image" src="https://github.com/user-attachments/assets/4792df63-fb6b-4a06-b789-42c76f4cd0b9" />
+
+***
+
+## 8. Flatten the Hierarchy
+
+```bash
+flatten
+```
+
+This command removes all module hierarchy, producing a flat netlist. Flattening simplifies the design for downstream tools like place-and-route but can make debugging harder.
+
+<img width="462" height="163" alt="image" src="https://github.com/user-attachments/assets/ad77fe72-c1ee-427b-9d9e-e8c552fff8a6" />
+
+
+***
+
+## 9. Set Undefined Signals to Zero
+
+```bash
+setundef -zero
+```
+
+This replaces any undefined signals in the design with constant zero. This avoids simulation or synthesis issues caused by unknown values.
+
+<img width="760" height="88" alt="image" src="https://github.com/user-attachments/assets/c8cfe015-6bcc-419d-a86c-35254b75f0c7" />
+
+***
+
+## 10. Clean Unused Wires and Cells
+
+```bash
+clean -purge
+```
+
+This removes any unused wires, cells, or logic from the design, reducing netlist size and complexity.
+
+<img width="491" height="75" alt="image" src="https://github.com/user-attachments/assets/b4f0874c-6830-482f-83e3-30e2175f01b6" />
+
+
+***
+
+## 11. Rename Nets and Cells for Readability
+
+```bash
+rename -enumerate
+```
+
+This renames nets and cells with simple enumerated names (e.g., `net1`, `cell2`) to make the netlist easier to read and analyze.
+
+
+***
+
+## 12. Print Synthesis Statistics
+
+```bash
+stat
+```
+
+This command prints statistics about the synthesized design, such as the number of wires, cells, and memory elements. It helps verify the synthesis results.
+
+<img width="390" height="274" alt="image" src="https://github.com/user-attachments/assets/a6371a64-9fd4-438e-b725-bf4b1c387029" />
+
+***
+
+## 13. Write the Synthesized Verilog Netlist
+
+```bash
+write_verilog -noattr /home/vsdtapeout/Desktop/labs/Week_2/VLSI/VSDBabySoC/src/vsdbabysoc.synth.v
+```
+
+This exports the final synthesized netlist to a Verilog file without any synthesis attributes (`-noattr`). This netlist is technology-mapped and optimized, ready for place-and-route or further analysis.
+
+<img width="809" height="194" alt="image" src="https://github.com/user-attachments/assets/0f499bf1-e1b7-4c5d-a283-fecc76555dd7" />
+
+***
