@@ -539,3 +539,80 @@ This exports the final synthesized netlist to a Verilog file without any synthes
 <img width="809" height="194" alt="image" src="https://github.com/user-attachments/assets/0f499bf1-e1b7-4c5d-a283-fecc76555dd7" />
 
 ***
+
+# Post Synthesis Simulation and Waveforms
+
+## Compile the Testbench
+
+Before running the iverilog command, copy the necessary standard cell and primitive models: These files must be present in the same directory as the testbench (src/module) to resolve all module references during compilation.
+
+To ensure that the synthesized Verilog file (vsdbabysoc.synth.v) is available in the src/module directory for further processing or simulation, you can copy it from the output directory to the src/module directory. Here is the step to do that:
+
+Run the following iverilog command to compile the testbench:
+
+```bash
+iverilog -o /home/vsdtapeout/Desktop/labs/Week_2/VLSI/VSDBabySoC/src/output/post_synth_sim.out -DPOST_SYNTH_SIM -DFUNCTIONAL -DUNIT_DELAY=#1 -I /home/vsdtapeout/Desktop/labs/Week_2/VLSI/VSDBabySoC/src/include/ -I /home/vsdtapeout/Desktop/labs/Week_2/VLSI/VSDBabySoC/src/module/ /home/vsdtapeout/Desktop/labs/Week_2/VLSI/VSDBabySoC/src/module/testbench.v
+```
+
+| **Option / Argument**                                                      | **Purpose / Description**                                                            |
+| -------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| `iverilog`                                                                 | Icarus Verilog compiler used to compile Verilog files into a simulation executable.  |
+| `-o /home/vsdtapeout/Desktop/labs/Week_2/VLSI/VSDBabySoC/output/post_synth_sim.out` | Specifies the output binary file for simulation.                                     |
+| `-DPOST_SYNTH_SIM`                                                         | Defines the macro `POST_SYNTH_SIM` (used in testbench to switch simulation modes).   |
+| `-DFUNCTIONAL`                                                             | Defines `FUNCTIONAL` to use behavioral models instead of detailed gate-level timing. |
+| `-DUNIT_DELAY=#1`                                                          | Assigns a unit delay of `#1` to all gates for post-synthesis simulation.             |
+| `-I /home/vsdtapeout/Desktop/labs/Week_2/VLSI/VSDBabySoC/src/include`                              | Adds the `include` directory to the search path for `\`include\` directives.         |
+| `-I /home/vsdtapeout/Desktop/labs/Week_2/VLSI/VSDBabySoC/src/module`                               | Adds the `module` directory to the include path for additional module references.    |
+| `/home/vsdtapeout/Desktop/labs/Week_2/VLSI/VSDBabySoC/src/module/testbench.v`                      | Specifies the testbench file as the top-level design for simulation.                 |
+
+#### ❗Note - You may encounter this error:
+```bash
+$ iverilog -o /home/vsdtapeout/Desktop/labs/Week_2/VLSI/VSDBabySoC/output/post_synth_sim/post_synth_sim.out -DPOST_SYNTH_SIM -DFUNCTIONAL -DUNIT_DELAY=#1 -I /home/vsdtapeout/Desktop/labs/Week_2/VLSI/VSDBabySoC/src/include -I /home/vsdtapeout/Desktop/labs/Week_2/VLSI/VSDBabySoC/src/module /home/vsdtapeout/Desktop/labs/Week_2/VLSI/VSDBabySoC/src/module/testbench.v
+/home/vsdtapeout/Desktop/labs/Week_2/VLSI/VSDBabySoC/src/module/sky130_fd_sc_hd.v:74452: syntax error
+I give up.
+```
+_To resolve this : Update the syntax in the file sky130_fd_sc_hd.v at or around line 74452._
+
+###### Change:
+```bash
+`endif SKY130_FD_SC_HD__LPFLOW_BLEEDER_FUNCTIONAL_V
+```
+###### To:
+```bash
+`endif // SKY130_FD_SC_HD__LPFLOW_BLEEDER_FUNCTIONAL_V
+```
+### **Step 2: Navigate to the Post-Synthesis Simulation Output Directory**
+```bash
+cd output/
+```
+---
+### **Step 3: Run the Simulation**
+
+```bash
+./post_synth_sim.out
+```
+<img width="808" height="291" alt="image" src="https://github.com/user-attachments/assets/a8056627-e4c5-4c6f-8f2a-4bea01418cb9" />
+---
+
+### **Step 4: View the Waveforms in GTKWave**
+
+```bash
+gtkwave post_synth_sim.vcd
+```
+---
+
+<img width="1051" height="580" alt="image" src="https://github.com/user-attachments/assets/9976a3b2-b160-4be5-bb9c-c7b31ca23f61" />
+
+## Comparing Pre-Synthesis and Post-Synthesis Output
+
+To ensure that the synthesis process did not alter the original design behavior, the output from the pre-synthesis simulation was compared with the post-synthesis simulation.
+
+Both simulations were run using GTKWave, and the resulting waveforms were observed.
+
+<img width="1051" height="562" alt="image" src="https://github.com/user-attachments/assets/1aefb89d-70b5-4ad8-81b2-4fd186aa5e9d" />
+
+<img width="1051" height="580" alt="image" src="https://github.com/user-attachments/assets/9976a3b2-b160-4be5-bb9c-c7b31ca23f61" />
+
+✅ _The outputs match exactly, confirming that the functionality is preserved across the synthesis flow._
+
+_This validates that the synthesized netlist is functionally equivalent to the RTL design._
